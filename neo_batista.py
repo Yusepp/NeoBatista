@@ -162,5 +162,6 @@ async def stop(ctx: commands.Context):
 # Run the bot instance
 if __name__ == "__main__":
     # Constants for configuration
-    DISCORD_TOKEN = os.environ.get('DISCORDTOKEN')
+    #DISCORD_TOKEN = os.environ.get('DISCORDTOKEN')
+    DISCORD_TOKEN = "MTE4OTczNzE3NjMyMjI5MzgyMg.G5uBIM.QGwXfRYfM3GWzpeUz1LYoJnG6DTO499tVkjVB8"
     bot.run(DISCORD_TOKEN)
