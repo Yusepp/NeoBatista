@@ -2,6 +2,8 @@ import discord
 import datetime
 import logging
 import os
+from yt_dlp import YoutubeDL
+import asyncio
 
 # Constants for configuration
 YTDL_FORMAT_OPTIONS = {
@@ -23,37 +25,47 @@ FFMPEG_OPTIONS = {'options': '-vn'}
 #YoutubeDL.utils.bug_reports_message = lambda: ''
 
 class GuildState:
-    def __init__(self):
+    def __init__(self, event_loop, ctx):
         self.voice_client: discord.VoiceClient = None
         self.queue: list = []
         self.current_song: str = None
+        self.event_loop = event_loop  # Store the event loop
+        self.ctx = ctx
 
     def enqueue_song(self, song):
         self.queue.append(song)
     
-    def play_next_song(self, error=None):            
+    async def play_next_song(self, error=None, loop=None):
         if not self.queue:
             logging.info('The queue is empty, stopping playback.')
             return
         
         self.current_song = self.queue.pop(0)
-        logging.info(f"About to play: {self.current_song}")
-        
-        # Adjust the source path according to your setup
-        source = discord.FFmpegPCMAudio(executable="F:\\Descargas\\externals\\ffmpeg.exe", source=self.current_song, **FFMPEG_OPTIONS)
-        
-        def after_playback(error):
-            self.play_next_song(error)
-        
-        if self.voice_client:
-            self.voice_client.play(source, after=after_playback)
-        else:
-            logging.warning("Voice client is not connected.")
+        try:
+            self.current_song = await self.event_loop.run_in_executor(None, lambda: YoutubeDL(YTDL_FORMAT_OPTIONS).extract_info(self.current_song, download=True))
+            if 'entries' in self.current_song:
+                self.current_song = self.current_song['entries'][0]
+            self.current_song = YoutubeDL(YTDL_FORMAT_OPTIONS).prepare_filename(self.current_song)
+            song = self.current_song.replace('.webm', '').replace(".mp3", "").replace(".m4a", "")
+            await self.ctx.send(f"Playing **{song}**")
+            
+            source = discord.FFmpegPCMAudio(source=self.current_song, **FFMPEG_OPTIONS)
+            
+            async def after_playback(error):
+                self.update_activity()
+                await self.play_next_song(error, loop=self.event_loop)
+            
+            if self.voice_client:
+                self.voice_client.play(source, after=lambda e: self.event_loop.create_task(after_playback(e)))
+            else:
+                logging.warning("Voice client is not connected.")
+        except Exception as e:
+            logging.error(f"Error playing next song: {e}")
 
-    def skip_song(self, ctx):
+    async def skip_song(self, ctx, loop=None):
         if self.voice_client.is_playing():
             self.voice_client.stop()
-            self.play_next_song(ctx)
+        await self.play_next_song(loop=self.event_loop)
 
     def clear_queue(self):
         self.queue = []
@@ -75,6 +87,6 @@ class GuildState:
         
     def clear_song_files(self):
         for song in os.listdir('.'):
-            if song.endswith('.mp3') or song.endswith('.webm'):
+            if song.endswith('.mp3') or song.endswith('.webm') or song.endswith('.m4a'):
                 os.remove(song)
            

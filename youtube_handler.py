@@ -21,7 +21,6 @@ FFMPEG_OPTIONS = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconne
 
 
 # Update YT-DL options to ignore bug reports
-#YoutubeDL.utils.bug_reports_message = lambda: ''
 
 class YTDLSource(discord.PCMVolumeTransformer):
     """
@@ -45,12 +44,21 @@ class YTDLSource(discord.PCMVolumeTransformer):
         """
         # Extract the video information using YTDL
         loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, lambda: YoutubeDL(YTDL_FORMAT_OPTIONS).extract_info(url, download=not stream))
-        
-        # Check possible results and select the first entry
-        if 'entries' in data:
-            data = data['entries'][0]
+        if "playlist?" not in url:
+            YTDL_FORMAT_OPTIONS['ignoreerrors'] = True
+            YTDL_FORMAT_OPTIONS["extract_flat"] = True
+            YTDL_FORMAT_OPTIONS["skip_download"] = True
+            # Check possible results and select the first entry
+            filename = [url]
+            
 
-        # Get the filename and return the source or filename
-        filename = data['title'] if stream else YoutubeDL(YTDL_FORMAT_OPTIONS).prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **FFMPEG_OPTIONS), data=data) if stream else filename
+        elif "playlist?" in url:
+            YTDL_FORMAT_OPTIONS['noplaylist'] = False
+            YTDL_FORMAT_OPTIONS['ignoreerrors'] = True
+            YTDL_FORMAT_OPTIONS["extract_flat"] = True
+            YTDL_FORMAT_OPTIONS["skip_download"] = True
+            data = await loop.run_in_executor(None, lambda: YoutubeDL(YTDL_FORMAT_OPTIONS).extract_info(url, download=False))
+            filename = [track["url"] for track in data['entries']]
+        
+        
+        return filename
