@@ -1,0 +1,1 @@
+"""NeoBatista test suite."""

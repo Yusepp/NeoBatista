@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "neobatista"
+version = "1.0.0"
+description = "A typed, concurrency-safe Discord music bot."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { file = "LICENSE" }
+dependencies = [
+  "discord.py[voice]>=2.7.1,<3",
+  "python-dotenv>=1.1,<2",
+  "spotipy>=2.26,<3",
+  "yt-dlp[default]>=2026.5.5,<2027",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.15,<2",
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.26,<2",
+  "pytest-cov>=6,<7",
+  "ruff>=0.11,<1",
+]
+
+[project.scripts]
+neobatista = "neobatista.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["neobatista"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers --strict-config --cov=neobatista --cov-report=term-missing --cov-branch --cov-fail-under=85"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = [
+  "neobatista/bot.py",
+  "neobatista/cog.py",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ASYNC", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["spotipy", "spotipy.*", "yt_dlp", "yt_dlp.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["neobatista.cog"]
+# discord.py 2.7's hybrid decorator overload currently collapses Cog methods
+# to Never under strict checking. Keep strict checking for the method bodies.
+disable_error_code = ["arg-type"]
