@@ -87,6 +87,6 @@ class GuildState:
         
     def clear_song_files(self):
         for song in os.listdir('.'):
-            if song.endswith('.mp3') or song.endswith('.webm') or song.endswith('.m4a'):
+            if song.endswith('.mp3') or song.endswith('.webm') or song.endswith('.m4a') or song.endswith('.mp4'):
                 os.remove(song)
            
